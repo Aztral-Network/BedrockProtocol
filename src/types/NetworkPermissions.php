@@ -32,6 +32,10 @@ final class NetworkPermissions{
 		return new self($disableClientSounds);
 	}
 
+	public static function createDefault() : self{
+		return new self(false);
+	}
+
 	public function encode(ByteBufferWriter $out) : void{
 		CommonTypes::putBool($out, $this->disableClientSounds);
 	}

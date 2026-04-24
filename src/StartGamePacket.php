@@ -213,6 +213,51 @@ class StartGamePacket extends DataPacket implements ClientboundPacket{
 		}
 	}
 
+	protected function decodePayloadLegacy(string $buffer, int $protocolId) : void{
+		$in = \pocketmine\network\mcpe\protocol\serializer\PacketSerializer::decoder($buffer);
+		
+		$this->actorUniqueId = $in->getVarLong();
+		$this->actorRuntimeId = $in->getUnsignedVarLong();
+		$this->playerGamemode = $in->getSignedVarInt();
+		
+		$x = $in->getDouble();
+		$y = $in->getDouble();
+		$z = $in->getDouble();
+		$this->playerPosition = new Vector3($x, $y, $z);
+		
+		$this->pitch = $in->getFloat();
+		$this->yaw = $in->getFloat();
+		
+		$this->levelSettings = \pocketmine\network\mcpe\protocol\types\LevelSettings::readLegacy($in);
+		
+		$this->levelId = $in->getString();
+		$this->worldName = $in->getString();
+		$this->premiumWorldTemplateId = $in->getString();
+		$this->isTrial = $in->getBool();
+		
+		$movementMode = $in->getSignedVarInt();
+		$this->playerMovementSettings = \pocketmine\network\mcpe\protocol\types\PlayerMovementSettings::createLegacy($movementMode);
+		
+		$this->currentTick = $in->getUnsignedVarLong();
+		$this->enchantmentSeed = $in->getSignedVarInt();
+		
+		$blockPaletteCount = $in->getUnsignedVarInt();
+		for($i = 0; $i < $blockPaletteCount; ++$i){
+			$blockName = $in->getString();
+			$this->blockPalette[] = new BlockPaletteEntry($blockName, new CacheableNbt(new CompoundTag()));
+		}
+		
+		$this->multiplayerCorrelationId = $in->getString();
+		$this->enableNewInventorySystem = $in->getBool();
+		$this->serverSoftwareVersion = $in->getString();
+		$this->blockPaletteChecksum = $in->getUnsignedVarLong();
+		$this->worldTemplateId = $in->getUUID();
+		$this->enableClientSideChunkGeneration = $in->getBool();
+		$this->blockNetworkIdsAreHashes = $in->getBool();
+		$this->networkPermissions = \pocketmine\network\mcpe\protocol\types\NetworkPermissions::createDefault();
+		$this->serverTelemetryData = new ServerTelemetryData();
+	}
+
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putActorUniqueId($out, $this->actorUniqueId);
 		CommonTypes::putActorRuntimeId($out, $this->actorRuntimeId);

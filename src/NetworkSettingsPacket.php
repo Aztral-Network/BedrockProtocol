@@ -78,6 +78,15 @@ class NetworkSettingsPacket extends DataPacket implements ClientboundPacket{
 		$this->clientThrottleScalar = LE::readFloat($in);
 	}
 
+	protected function decodePayloadLegacy(string $buffer, int $protocolId) : void{
+		$in = \pocketmine\network\mcpe\protocol\serializer\PacketSerializer::decoder($buffer);
+		$this->compressionThreshold = $in->getSignedShort();
+		$this->compressionAlgorithm = $in->getSignedShort();
+		$this->enableClientThrottling = $in->getBool();
+		$this->clientThrottleThreshold = $in->getByte();
+		$this->clientThrottleScalar = $in->getFloat();
+	}
+
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		LE::writeUnsignedShort($out, $this->compressionThreshold);
 		LE::writeUnsignedShort($out, $this->compressionAlgorithm);

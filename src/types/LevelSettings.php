@@ -23,6 +23,7 @@ use pmmp\encoding\VarInt;
 use pocketmine\network\mcpe\protocol\PacketDecodeException;
 use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
+use pocketmine\network\mcpe\protocol\types\BlockPosition;
 
 final class LevelSettings{
 
@@ -58,9 +59,9 @@ final class LevelSettings{
 	public Experiments $experiments;
 	public bool $hasBonusChestEnabled = false;
 	public bool $hasStartWithMapEnabled = false;
-	public int $defaultPlayerPermission = PlayerPermissions::MEMBER; //TODO
+	public int $defaultPlayerPermission = PlayerPermissions::MEMBER;
 
-	public int $serverChunkTickRadius = 4; //TODO (leave as default for now)
+	public int $serverChunkTickRadius = 4;
 
 	public bool $hasLockedBehaviorPack = false;
 	public bool $hasLockedResourcePack = false;
@@ -102,22 +103,32 @@ final class LevelSettings{
 		$this->spawnSettings = SpawnSettings::read($in);
 		$this->generator = VarInt::readSignedInt($in);
 		$this->worldGamemode = VarInt::readSignedInt($in);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_80){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_80 && $protocolId < ProtocolInfo::PROTOCOL_1_26_0){
 			$this->hardcore = CommonTypes::getBool($in);
 		}
 		$this->difficulty = VarInt::readSignedInt($in);
 		$this->spawnPosition = CommonTypes::getBlockPosition($in, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
 		$this->hasAchievementsDisabled = CommonTypes::getBool($in);
-		$this->editorWorldType = $protocolId >= ProtocolInfo::PROTOCOL_1_20_30 ? VarInt::readSignedInt($in) : (CommonTypes::getBool($in) ? EditorWorldType::PROJECT : EditorWorldType::NON_EDITOR);
-		$this->createdInEditorMode = CommonTypes::getBool($in);
-		$this->exportedFromEditorMode = CommonTypes::getBool($in);
+
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_30){
+			$this->editorWorldType = VarInt::readSignedInt($in);
+			$this->createdInEditorMode = CommonTypes::getBool($in);
+			$this->exportedFromEditorMode = CommonTypes::getBool($in);
+		}else{
+			$this->editorWorldType = EditorWorldType::NON_EDITOR;
+			$this->createdInEditorMode = false;
+			$this->exportedFromEditorMode = false;
+		}
 		$this->time = VarInt::readSignedInt($in);
 		$this->eduEditionOffer = VarInt::readSignedInt($in);
 		$this->hasEduFeaturesEnabled = CommonTypes::getBool($in);
 		$this->eduProductUUID = CommonTypes::getString($in);
 		$this->rainLevel = LE::readFloat($in);
 		$this->lightningLevel = LE::readFloat($in);
-		$this->hasConfirmedPlatformLockedContent = CommonTypes::getBool($in);
+
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_0){
+			$this->hasConfirmedPlatformLockedContent = CommonTypes::getBool($in);
+		}
 		$this->isMultiplayerGame = CommonTypes::getBool($in);
 		$this->hasLANBroadcast = CommonTypes::getBool($in);
 		$this->xboxLiveBroadcastMode = VarInt::readSignedInt($in);
@@ -126,28 +137,54 @@ final class LevelSettings{
 		$this->isTexturePacksRequired = CommonTypes::getBool($in);
 		$this->gameRules = CommonTypes::getGameRules($in, $protocolId, true);
 		$this->experiments = Experiments::read($in);
-		$this->hasBonusChestEnabled = CommonTypes::getBool($in);
-		$this->hasStartWithMapEnabled = CommonTypes::getBool($in);
+
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_100){
+			$this->hasBonusChestEnabled = CommonTypes::getBool($in);
+			$this->hasStartWithMapEnabled = CommonTypes::getBool($in);
+		}
 		$this->defaultPlayerPermission = VarInt::readSignedInt($in);
-		$this->serverChunkTickRadius = LE::readSignedInt($in); //doesn't make sense for this to be signed, but that's what the spec says
+		$this->serverChunkTickRadius = LE::readSignedInt($in);
 		$this->hasLockedBehaviorPack = CommonTypes::getBool($in);
 		$this->hasLockedResourcePack = CommonTypes::getBool($in);
 		$this->isFromLockedWorldTemplate = CommonTypes::getBool($in);
 		$this->useMsaGamertagsOnly = CommonTypes::getBool($in);
 		$this->isFromWorldTemplate = CommonTypes::getBool($in);
 		$this->isWorldTemplateOptionLocked = CommonTypes::getBool($in);
-		$this->onlySpawnV1Villagers = CommonTypes::getBool($in);
-		$this->disablePersona = CommonTypes::getBool($in);
-		$this->disableCustomSkins = CommonTypes::getBool($in);
-		$this->muteEmoteAnnouncements = CommonTypes::getBool($in);
+
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_0){
+			$this->onlySpawnV1Villagers = CommonTypes::getBool($in);
+		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_18_12){
+			$this->disablePersona = CommonTypes::getBool($in);
+			$this->disableCustomSkins = CommonTypes::getBool($in);
+		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_0){
+			$this->muteEmoteAnnouncements = CommonTypes::getBool($in);
+		}
 		$this->vanillaVersion = CommonTypes::getString($in);
-		$this->limitedWorldWidth = LE::readSignedInt($in); //doesn't make sense for this to be signed, but that's what the spec says
-		$this->limitedWorldLength = LE::readSignedInt($in); //same as above
-		$this->isNewNether = CommonTypes::getBool($in);
-		$this->eduSharedUriResource = EducationUriResource::read($in);
-		$this->experimentalGameplayOverride = CommonTypes::readOptional($in, CommonTypes::getBool(...));
-		$this->chatRestrictionLevel = Byte::readUnsigned($in);
-		$this->disablePlayerInteractions = CommonTypes::getBool($in);
+		$this->limitedWorldWidth = LE::readSignedInt($in);
+		$this->limitedWorldLength = LE::readSignedInt($in);
+
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_100){
+			$this->isNewNether = CommonTypes::getBool($in);
+		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_18_12 && $protocolId < ProtocolInfo::PROTOCOL_1_20_0){
+			$this->eduSharedUriResource = EducationUriResource::read($in);
+		}elseif($protocolId >= ProtocolInfo::PROTOCOL_1_20_0){
+			$this->eduSharedUriResource = EducationUriResource::read($in);
+		}
+
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_40 && $protocolId < ProtocolInfo::PROTOCOL_1_21_0){
+			$this->experimentalGameplayOverride = CommonTypes::readOptional($in, CommonTypes::getBool(...));
+		}
+
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_0 && $protocolId < ProtocolInfo::PROTOCOL_1_26_0){
+			$this->chatRestrictionLevel = Byte::readUnsigned($in);
+		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_0 && $protocolId < ProtocolInfo::PROTOCOL_1_26_0){
+			$this->disablePlayerInteractions = CommonTypes::getBool($in);
+		}
+
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_0 && $protocolId <= ProtocolInfo::PROTOCOL_1_21_130){
 			$serverId = CommonTypes::getString($in);
 			$worldId = CommonTypes::getString($in);
@@ -163,26 +200,32 @@ final class LevelSettings{
 		$this->spawnSettings->write($out);
 		VarInt::writeSignedInt($out, $this->generator);
 		VarInt::writeSignedInt($out, $this->worldGamemode);
-		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_80){
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_80 && $protocolId < ProtocolInfo::PROTOCOL_1_26_0){
 			CommonTypes::putBool($out, $this->hardcore);
 		}
 		VarInt::writeSignedInt($out, $this->difficulty);
 		CommonTypes::putBlockPosition($out, $this->spawnPosition, $protocolId >= ProtocolInfo::PROTOCOL_1_26_10);
 		CommonTypes::putBool($out, $this->hasAchievementsDisabled);
+
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_30){
 			VarInt::writeSignedInt($out, $this->editorWorldType);
+			CommonTypes::putBool($out, $this->createdInEditorMode);
+			CommonTypes::putBool($out, $this->exportedFromEditorMode);
 		}else{
 			CommonTypes::putBool($out, $this->editorWorldType !== EditorWorldType::NON_EDITOR);
 		}
-		CommonTypes::putBool($out, $this->createdInEditorMode);
-		CommonTypes::putBool($out, $this->exportedFromEditorMode);
+
 		VarInt::writeSignedInt($out, $this->time);
 		VarInt::writeSignedInt($out, $this->eduEditionOffer);
 		CommonTypes::putBool($out, $this->hasEduFeaturesEnabled);
 		CommonTypes::putString($out, $this->eduProductUUID);
 		LE::writeFloat($out, $this->rainLevel);
 		LE::writeFloat($out, $this->lightningLevel);
-		CommonTypes::putBool($out, $this->hasConfirmedPlatformLockedContent);
+
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_0){
+			CommonTypes::putBool($out, $this->hasConfirmedPlatformLockedContent);
+		}
+
 		CommonTypes::putBool($out, $this->isMultiplayerGame);
 		CommonTypes::putBool($out, $this->hasLANBroadcast);
 		VarInt::writeSignedInt($out, $this->xboxLiveBroadcastMode);
@@ -191,28 +234,55 @@ final class LevelSettings{
 		CommonTypes::putBool($out, $this->isTexturePacksRequired);
 		CommonTypes::putGameRules($out, $protocolId, $this->gameRules, true);
 		$this->experiments->write($out);
-		CommonTypes::putBool($out, $this->hasBonusChestEnabled);
-		CommonTypes::putBool($out, $this->hasStartWithMapEnabled);
+
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_100){
+			CommonTypes::putBool($out, $this->hasBonusChestEnabled);
+			CommonTypes::putBool($out, $this->hasStartWithMapEnabled);
+		}
+
 		VarInt::writeSignedInt($out, $this->defaultPlayerPermission);
-		LE::writeSignedInt($out, $this->serverChunkTickRadius); //doesn't make sense for this to be signed, but that's what the spec says
+		LE::writeSignedInt($out, $this->serverChunkTickRadius);
 		CommonTypes::putBool($out, $this->hasLockedBehaviorPack);
 		CommonTypes::putBool($out, $this->hasLockedResourcePack);
 		CommonTypes::putBool($out, $this->isFromLockedWorldTemplate);
 		CommonTypes::putBool($out, $this->useMsaGamertagsOnly);
 		CommonTypes::putBool($out, $this->isFromWorldTemplate);
 		CommonTypes::putBool($out, $this->isWorldTemplateOptionLocked);
-		CommonTypes::putBool($out, $this->onlySpawnV1Villagers);
-		CommonTypes::putBool($out, $this->disablePersona);
-		CommonTypes::putBool($out, $this->disableCustomSkins);
-		CommonTypes::putBool($out, $this->muteEmoteAnnouncements);
+
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_0){
+			CommonTypes::putBool($out, $this->onlySpawnV1Villagers);
+		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_18_12){
+			CommonTypes::putBool($out, $this->disablePersona);
+			CommonTypes::putBool($out, $this->disableCustomSkins);
+		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_0){
+			CommonTypes::putBool($out, $this->muteEmoteAnnouncements);
+		}
+
 		CommonTypes::putString($out, $this->vanillaVersion);
-		LE::writeSignedInt($out, $this->limitedWorldWidth); //doesn't make sense for this to be signed, but that's what the spec says
-		LE::writeSignedInt($out, $this->limitedWorldLength); //same as above
-		CommonTypes::putBool($out, $this->isNewNether);
-		($this->eduSharedUriResource ?? new EducationUriResource("", ""))->write($out);
-		CommonTypes::writeOptional($out, $this->experimentalGameplayOverride, CommonTypes::putBool(...));
-		Byte::writeUnsigned($out, $this->chatRestrictionLevel);
-		CommonTypes::putBool($out, $this->disablePlayerInteractions);
+		LE::writeSignedInt($out, $this->limitedWorldWidth);
+		LE::writeSignedInt($out, $this->limitedWorldLength);
+
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_16_100){
+			CommonTypes::putBool($out, $this->isNewNether);
+		}
+
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_18_12){
+			($this->eduSharedUriResource ?? new EducationUriResource("", ""))->write($out);
+		}
+
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_17_40 && $protocolId < ProtocolInfo::PROTOCOL_1_21_0){
+			CommonTypes::writeOptional($out, $this->experimentalGameplayOverride, CommonTypes::putBool(...));
+		}
+
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_20_0 && $protocolId < ProtocolInfo::PROTOCOL_1_26_0){
+			Byte::writeUnsigned($out, $this->chatRestrictionLevel);
+		}
+		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_0 && $protocolId < ProtocolInfo::PROTOCOL_1_26_0){
+			CommonTypes::putBool($out, $this->disablePlayerInteractions);
+		}
+
 		if($protocolId >= ProtocolInfo::PROTOCOL_1_21_0 && $protocolId <= ProtocolInfo::PROTOCOL_1_21_130){
 			CommonTypes::putString($out, $serverTelemetryData->getServerId());
 			CommonTypes::putString($out, $serverTelemetryData->getWorldId());
@@ -221,5 +291,84 @@ final class LevelSettings{
 				CommonTypes::putString($out, $serverTelemetryData->getOwnerId());
 			}
 		}
+	}
+
+	public static function readLegacy(\pocketmine\network\mcpe\protocol\serializer\PacketSerializer $in) : self{
+		$result = new self;
+		
+		$result->seed = $in->getUnsignedVarLong();
+		$result->spawnSettings = SpawnSettings::readLegacy($in);
+		$result->generator = $in->getSignedVarInt();
+		$result->worldGamemode = $in->getSignedVarInt();
+		$result->hardcore = false;
+		$result->difficulty = $in->getSignedVarInt();
+		
+		$spawnX = $in->getSignedVarInt();
+		$spawnY = $in->getSignedVarInt();
+		$spawnZ = $in->getSignedVarInt();
+		$result->spawnPosition = new BlockPosition($spawnX, $spawnY, $spawnZ);
+		
+		$result->hasAchievementsDisabled = $in->getBool();
+		$result->time = $in->getSignedVarInt();
+		$result->eduEditionOffer = $in->getSignedVarInt();
+		$result->hasEduFeaturesEnabled = $in->getBool();
+		$result->eduProductUUID = $in->getString();
+		$result->rainLevel = $in->getFloat();
+		$result->lightningLevel = $in->getFloat();
+		$result->hasConfirmedPlatformLockedContent = $in->getBool();
+		$result->isMultiplayerGame = $in->getBool();
+		$result->hasLANBroadcast = $in->getBool();
+		$result->xboxLiveBroadcastMode = $in->getSignedVarInt();
+		$result->platformBroadcastMode = $in->getSignedVarInt();
+		$result->commandsEnabled = $in->getBool();
+		$result->isTexturePacksRequired = $in->getBool();
+		
+		$result->gameRules = [];
+		$gameRuleCount = $in->getUnsignedVarInt();
+		for($i = 0; $i < $gameRuleCount; $i++){
+			$name = $in->getString();
+			$type = $in->getByte();
+			switch($type){
+				case 1:
+					$value = $in->getBool();
+					break;
+				case 2:
+					$value = $in->getSignedVarInt();
+					break;
+				case 3:
+					$value = $in->getFloat();
+					break;
+				default:
+					$value = null;
+			}
+			$result->gameRules[$name] = new GameRule($value, true);
+		}
+		
+		$experimentCount = $in->getUnsignedVarInt();
+		$experimentsData = [];
+		for($i = 0; $i < $experimentCount; $i++){
+			$experimentsData[$in->getString()] = $in->getBool();
+		}
+		$result->experiments = new Experiments($experimentsData);
+		
+		$result->hasBonusChestEnabled = $in->getBool();
+		$result->hasStartWithMapEnabled = $in->getBool();
+		$result->defaultPlayerPermission = $in->getSignedVarInt();
+		$result->serverChunkTickRadius = $in->getSignedVarInt();
+		$result->hasLockedBehaviorPack = $in->getBool();
+		$result->hasLockedResourcePack = $in->getBool();
+		$result->isFromLockedWorldTemplate = $in->getBool();
+		$result->useMsaGamertagsOnly = $in->getBool();
+		$result->isFromWorldTemplate = $in->getBool();
+		$result->isWorldTemplateOptionLocked = $in->getBool();
+		$result->onlySpawnV1Villagers = $in->getBool();
+		$result->disablePersona = $in->getBool();
+		$result->disableCustomSkins = $in->getBool();
+		$result->isNewNether = $in->getBool();
+		$result->vanillaVersion = "1.18.12";
+		$result->limitedWorldWidth = $in->getSignedVarInt();
+		$result->limitedWorldLength = $in->getSignedVarInt();
+		
+		return $result;
 	}
 }

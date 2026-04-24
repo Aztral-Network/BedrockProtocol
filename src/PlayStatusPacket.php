@@ -47,6 +47,11 @@ class PlayStatusPacket extends DataPacket implements ClientboundPacket{
 		$this->status = BE::readUnsignedInt($in);
 	}
 
+	protected function decodePayloadLegacy(string $buffer, int $protocolId) : void{
+		$in = \pocketmine\network\mcpe\protocol\serializer\PacketSerializer::decoder($buffer);
+		$this->status = $in->getInt();
+	}
+
 	public function canBeSentBeforeLogin() : bool{
 		return true;
 	}

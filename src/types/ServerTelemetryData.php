@@ -21,10 +21,10 @@ use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 final class ServerTelemetryData{
 
 	public function __construct(
-		private string $serverId,
-		private string $scenarioId,
-		private string $worldId,
-		private string $ownerId,
+		private string $serverId = "",
+		private string $scenarioId = "",
+		private string $worldId = "",
+		private string $ownerId = "",
 	){}
 
 	public function getServerId() : string{ return $this->serverId; }

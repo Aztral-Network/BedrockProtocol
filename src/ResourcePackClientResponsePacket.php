@@ -53,6 +53,16 @@ class ResourcePackClientResponsePacket extends DataPacket implements Serverbound
 		}
 	}
 
+	protected function decodePayloadLegacy(string $buffer, int $protocolId) : void{
+		$in = \pocketmine\network\mcpe\protocol\serializer\PacketSerializer::decoder($buffer);
+		$this->status = $in->getByte();
+		$entryCount = $in->getUnsignedVarInt();
+		$this->packIds = [];
+		for($i = 0; $i < $entryCount; $i++){
+			$this->packIds[] = $in->getString();
+		}
+	}
+
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		Byte::writeUnsigned($out, $this->status);
 		LE::writeUnsignedShort($out, count($this->packIds));

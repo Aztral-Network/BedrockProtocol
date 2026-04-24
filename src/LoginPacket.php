@@ -45,10 +45,35 @@ class LoginPacket extends DataPacket implements ServerboundPacket{
 
 	protected function decodePayload(ByteBufferReader $in, int $protocolId) : void{
 		$this->protocol = BE::readUnsignedInt($in);
-		$this->decodeConnectionRequest(CommonTypes::getString($in));
+		$this->decodeConnectionRequest(CommonTypes::getString($in), $protocolId);
 	}
 
-	protected function decodeConnectionRequest(string $binary) : void{
+	protected function decodePayloadLegacy(string $buffer, int $protocolId) : void{
+		$in = \pocketmine\network\mcpe\protocol\serializer\PacketSerializer::decoder($buffer);
+		
+		$this->protocol = $in->getInt();
+		
+		// Legacy format: read the connection request string
+		$connectionRequest = $in->getString();
+		$this->decodeConnectionRequest($connectionRequest, $protocolId);
+	}
+
+	/**
+	 * Decodes the connection request based on protocol version.
+	 * Old protocols (1.16.100, 1.18.x) use different format than new protocols.
+	 */
+	protected function decodeConnectionRequest(string $binary, int $protocolId) : void{
+		if($protocolId < ProtocolInfo::PROTOCOL_1_20_0){
+			$this->decodeLegacyConnectionRequest($binary, $protocolId);
+		}else{
+			$this->decodeModernConnectionRequest($binary);
+		}
+	}
+
+	/**
+	 * Decode for protocols 1.20.0+
+	 */
+	private function decodeModernConnectionRequest(string $binary) : void{
 		$connRequestReader = new ByteBufferReader($binary);
 
 		$authInfoJsonLength = LE::readUnsignedInt($connRequestReader);
@@ -58,12 +83,44 @@ class LoginPacket extends DataPacket implements ServerboundPacket{
 		$this->clientDataJwt = $connRequestReader->readByteArray($clientDataJwtLength);
 	}
 
-	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
-		BE::writeUnsignedInt($out, $this->protocol);
-		CommonTypes::putString($out, $this->encodeConnectionRequest());
+	/**
+	 * Decode for legacy protocols (1.16.100, 1.18.x)
+	 * These use a JSON-based chain format.
+	 */
+	private function decodeLegacyConnectionRequest(string $binary, int $protocolId) : void{
+		// Legacy format uses different structure - read as raw for now
+		// The server will need to parse this differently based on version
+		$this->authInfoJson = $binary;
+		$this->clientDataJwt = "";
 	}
 
-	protected function encodeConnectionRequest() : string{
+	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
+		BE::writeUnsignedInt($out, $this->protocol);
+		CommonTypes::putString($out, $this->encodeConnectionRequest($protocolId));
+	}
+
+	protected function encodeConnectionRequest(int $protocolId) : string{
+		if($protocolId < ProtocolInfo::PROTOCOL_1_20_0){
+			return $this->encodeLegacyConnectionRequest();
+		}
+		return $this->encodeModernConnectionRequest();
+	}
+
+	private function encodeModernConnectionRequest() : string{
+		$connRequestWriter = new ByteBufferWriter();
+
+		LE::writeUnsignedInt($connRequestWriter, strlen($this->authInfoJson));
+		$connRequestWriter->writeByteArray($this->authInfoJson);
+
+		LE::writeUnsignedInt($connRequestWriter, strlen($this->clientDataJwt));
+		$connRequestWriter->writeByteArray($this->clientDataJwt);
+
+		return $connRequestWriter->getData();
+	}
+
+	private function encodeLegacyConnectionRequest() : string{
+		// For legacy protocols, we need to match their expected format
+		// This is a simplified version - actual implementation may vary
 		$connRequestWriter = new ByteBufferWriter();
 
 		LE::writeUnsignedInt($connRequestWriter, strlen($this->authInfoJson));

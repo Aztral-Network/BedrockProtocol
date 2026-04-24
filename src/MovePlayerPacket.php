@@ -103,6 +103,26 @@ class MovePlayerPacket extends DataPacket implements ClientboundPacket, Serverbo
 		$this->tick = VarInt::readUnsignedLong($in);
 	}
 
+	protected function decodePayloadLegacy(string $buffer, int $protocolId) : void{
+		$in = \pocketmine\network\mcpe\protocol\serializer\PacketSerializer::decoder($buffer);
+		$this->actorRuntimeId = $in->getUnsignedVarLong();
+		$x = $in->getDouble();
+		$y = $in->getDouble();
+		$z = $in->getDouble();
+		$this->position = new Vector3($x, $y, $z);
+		$this->pitch = $in->getFloat();
+		$this->yaw = $in->getFloat();
+		$this->headYaw = $in->getFloat();
+		$this->mode = $in->getByte();
+		$this->onGround = $in->getBool();
+		$this->ridingActorRuntimeId = $in->getUnsignedVarLong();
+		if($this->mode === MovePlayerPacket::MODE_TELEPORT){
+			$this->teleportCause = $in->getSignedVarInt();
+			$this->teleportItem = $in->getSignedVarInt();
+		}
+		$this->tick = $in->getUnsignedVarLong();
+	}
+
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		CommonTypes::putActorRuntimeId($out, $this->actorRuntimeId);
 		CommonTypes::putVector3($out, $this->position);

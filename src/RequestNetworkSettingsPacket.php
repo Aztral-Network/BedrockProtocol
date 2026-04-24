@@ -47,6 +47,11 @@ class RequestNetworkSettingsPacket extends DataPacket implements ServerboundPack
 		$this->protocolVersion = BE::readUnsignedInt($in);
 	}
 
+	protected function decodePayloadLegacy(string $buffer, int $protocolId) : void{
+		$in = \pocketmine\network\mcpe\protocol\serializer\PacketSerializer::decoder($buffer);
+		$this->protocolVersion = $in->getInt();
+	}
+
 	protected function encodePayload(ByteBufferWriter $out, int $protocolId) : void{
 		BE::writeUnsignedInt($out, $this->protocolVersion);
 	}

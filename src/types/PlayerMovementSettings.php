@@ -21,6 +21,10 @@ use pocketmine\network\mcpe\protocol\ProtocolInfo;
 use pocketmine\network\mcpe\protocol\serializer\CommonTypes;
 
 final class PlayerMovementSettings{
+	public const MOVEMENT_MODE_SERVER_AUTH = 0;
+	public const MOVEMENT_MODE_CLIENT_AUTH = 1;
+	public const MOVEMENT_MODE_SERVER_AUTH_V2 = 2;
+
 	public function __construct(
 		private ServerAuthMovementMode $movementType,
 		private int $rewindHistorySize,
@@ -40,6 +44,14 @@ final class PlayerMovementSettings{
 		$rewindHistorySize = VarInt::readSignedInt($in);
 		$serverAuthBlockBreaking = CommonTypes::getBool($in);
 		return new self($movementType ?? ServerAuthMovementMode::SERVER_AUTHORITATIVE_V3, $rewindHistorySize, $serverAuthBlockBreaking);
+	}
+
+	public static function createLegacy(int $movementMode) : self{
+		return new self(
+			ServerAuthMovementMode::fromPacket($movementMode),
+			0,
+			true
+		);
 	}
 
 	public function write(ByteBufferWriter $out, int $protocolId) : void{

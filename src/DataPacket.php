@@ -18,6 +18,7 @@ use pmmp\encoding\ByteBufferReader;
 use pmmp\encoding\ByteBufferWriter;
 use pmmp\encoding\DataDecodeException;
 use pmmp\encoding\VarInt;
+use pocketmine\network\mcpe\protocol\serializer\LegacyBinaryStream;
 use function get_class;
 
 abstract class DataPacket implements Packet{
@@ -55,6 +56,58 @@ abstract class DataPacket implements Packet{
 		}catch(DataDecodeException | PacketDecodeException $e){
 			throw PacketDecodeException::wrap($e, $this->getName());
 		}
+	}
+
+	/**
+	 * Legacy decode for protocols < 1.20.0 (1.16.x, 1.18.x)
+	 * @throws PacketDecodeException
+	 */
+	final public function decodeLegacy(string $buffer, int $protocolId) : void{
+		try{
+			$this->decodeHeaderLegacy($buffer);
+			$this->decodePayloadLegacy($buffer, $protocolId);
+		}catch(\Exception $e){
+			throw new PacketDecodeException($e->getMessage(), 0, $e);
+		}
+	}
+
+	/**
+	 * Decodes header for legacy protocols
+	 */
+	private function decodeHeaderLegacy(string $buffer) : void{
+		$in = \pocketmine\network\mcpe\protocol\serializer\PacketSerializer::decoder($buffer);
+		$header = $in->getVarInt();
+		$pid = $header & self::PID_MASK;
+		if($pid !== static::NETWORK_ID){
+			throw new PacketDecodeException("Expected " . static::NETWORK_ID . " for packet ID, got $pid");
+		}
+		$this->senderSubId = ($header >> self::SENDER_SUBCLIENT_ID_SHIFT) & self::SUBCLIENT_ID_MASK;
+		$this->recipientSubId = ($header >> self::RECIPIENT_SUBCLIENT_ID_SHIFT) & self::SUBCLIENT_ID_MASK;
+	}
+
+	/**
+	 * Decodes the packet body for legacy protocols. Override this in packet classes.
+	 *
+	 * @throws \Exception
+	 */
+	protected function decodePayloadLegacy(string $buffer, int $protocolId) : void{
+		throw new \RuntimeException("decodePayloadLegacy not implemented for " . static::class);
+	}
+
+	/**
+	 * @throws DataDecodeException
+	 * @throws PacketDecodeException
+	 */
+	protected function decodeHeader(ByteBufferReader $in) : void{
+		$header = VarInt::readUnsignedInt($in);
+		$pid = $header & self::PID_MASK;
+		if($pid !== static::NETWORK_ID){
+			//TODO: this means a logical error in the code, but how to prevent it from happening?
+			throw new PacketDecodeException("Expected " . static::NETWORK_ID . " for packet ID, got $pid");
+		}
+		$this->senderSubId = ($header >> self::SENDER_SUBCLIENT_ID_SHIFT) & self::SUBCLIENT_ID_MASK;
+		$this->recipientSubId = ($header >> self::RECIPIENT_SUBCLIENT_ID_SHIFT) & self::SUBCLIENT_ID_MASK;
+
 	}
 
 	/**

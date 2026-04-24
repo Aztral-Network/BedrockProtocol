@@ -53,6 +53,13 @@ final class SpawnSettings{
 		return new self($biomeType, $biomeName, $dimension);
 	}
 
+	public static function readLegacy(\pocketmine\network\mcpe\protocol\serializer\PacketSerializer $in) : self{
+		$biomeType = $in->getShort();
+		$biomeName = $in->getString();
+		$dimension = $in->getSignedVarInt();
+		return new self($biomeType, $biomeName, $dimension);
+	}
+
 	public function write(ByteBufferWriter $out) : void{
 		LE::writeUnsignedShort($out, $this->biomeType);
 		CommonTypes::putString($out, $this->biomeName);
